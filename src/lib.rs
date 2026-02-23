@@ -10,11 +10,11 @@ use pinocchio::{
 entrypoint!(process_instruction);
 
 pub mod errors;
+pub mod helpers;
 pub mod instructions;
 pub mod state;
 
 pub use instructions::*;
-// pub use state::*;
 
 declare_id!("22222222222222222222222222222222222222222222");
 

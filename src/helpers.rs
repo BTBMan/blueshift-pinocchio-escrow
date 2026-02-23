@@ -285,11 +285,11 @@ impl AccountChecker for ProgramAccount {
 // 创建程序账户
 pub trait ProgramAccountInit {
     // 创建程序拥有的 PDA 账户
+    // T 用于自动推导账户所需的空间大小，调用时使用 turbofish 语法：init::<Escrow>(...)
     fn init<'a, T: Sized>(
         payer: &AccountView,   // 支付者（对应 payer = xxx）
         account: &AccountView, // 要创建的账户
         seeds: &[Seed<'a>],    // PDA 种子（对应 seeds = [...]）
-        space: usize,          // 账户大小（对应 space = xxx）
     ) -> ProgramResult;
 }
 
@@ -298,8 +298,11 @@ impl ProgramAccountInit for ProgramAccount {
         payer: &AccountView,
         account: &AccountView,
         seeds: &[Seed<'a>],
-        space: usize,
     ) -> ProgramResult {
+        // 通过泛型 T 自动计算账户所需的空间大小
+        // 等价于 Anchor 的 space = 8 + Escrow::LEN
+        let space = core::mem::size_of::<T>();
+
         // 获取租金豁免所需的 lamports 数量
         // 对应 Anchor 自动进行的租金计算
         let lamports = Rent::get()?.try_minimum_balance(space)?;
