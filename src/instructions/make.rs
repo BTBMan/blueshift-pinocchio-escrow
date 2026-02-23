@@ -47,7 +47,6 @@ impl<'a> TryFrom<&'a [AccountView]> for MakeAccounts<'a> {
         SignerAccount::check(maker)?;
         MintInterface::check(mint_a)?;
         MintInterface::check(mint_b)?;
-        SystemAccount::check(vault)?;
         AssociatedTokenAccount::check(maker_ata_a, maker, mint_a, token_program)?;
 
         Ok(Self {
