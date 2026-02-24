@@ -3,7 +3,7 @@ use crate::{
     helpers::{
         AccountChecker, AssociatedTokenAccount, AssociatedTokenAccountCheck,
         AssociatedTokenAccountInit, MintInterface, ProgramAccount, ProgramAccountInit,
-        SignerAccount, SystemAccount,
+        SignerAccount,
     },
     state::Escrow,
 };

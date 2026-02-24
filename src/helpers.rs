@@ -332,6 +332,9 @@ pub trait AccountClose {
 }
 
 impl AccountClose for ProgramAccount {
+    // 操作内存来关闭账户
+    // 只有账户的 owner 才能 减少 lamports
+    // 交易结束后, 运行时会检查所有账户的 lamports 总和, 必须和交易前一致, 否则交易失败, 所以不能凭空增加 lamports
     fn close(account: &AccountView, destination: &AccountView) -> ProgramResult {
         {
             // 将账户数据的第一个字节设置为 0xff

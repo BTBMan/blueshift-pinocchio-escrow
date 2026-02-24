@@ -4,10 +4,11 @@ use pinocchio::{
     address::{declare_id, Address},
     entrypoint,
     error::ProgramError,
-    AccountView, ProgramResult,
+    nostd_panic_handler, AccountView, ProgramResult,
 };
 
 entrypoint!(process_instruction);
+nostd_panic_handler!();
 
 pub mod errors;
 pub mod helpers;
@@ -26,7 +27,7 @@ fn process_instruction(
     match instruction_data.split_first() {
         Some((Make::DISCRIMINATOR, data)) => Make::try_from((data, accounts))?.process(),
         Some((Take::DISCRIMINATOR, _)) => Take::try_from(accounts)?.process(),
-        Some((Refund::DISCRIMINATOR, _)) => Refund::try_from(accounts)?.process(),
+        // Some((Refund::DISCRIMINATOR, _)) => Refund::try_from(accounts)?.process(),
         _ => Err(ProgramError::InvalidInstructionData),
     }
 }
