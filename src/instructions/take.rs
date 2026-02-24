@@ -1,6 +1,6 @@
 use crate::{
     helpers::{
-        AccountChecker, AccountClose, AssociatedTokenAccount, AssociatedTokenAccountCheck,
+        AccountCheck, AccountClose, AssociatedTokenAccount, AssociatedTokenAccountCheck,
         AssociatedTokenAccountInit, MintInterface, ProgramAccount, SignerAccount,
     },
     state::Escrow,
@@ -13,24 +13,24 @@ use pinocchio::{
 use pinocchio_token::instructions::{CloseAccount, Transfer};
 
 pub struct TakeAccounts<'a> {
-    maker: &'a AccountView,
     taker: &'a AccountView,
+    maker: &'a AccountView,
     escrow: &'a AccountView,
     mint_a: &'a AccountView,
     mint_b: &'a AccountView,
-    maker_ata_b: &'a AccountView, // 从 taker 账户转账到 maker 的 token b 的 ata 账户
-    taker_ata_b: &'a AccountView, // 账户给 maker 的 token b 的 ata 账户转账
-    taker_ata_a: &'a AccountView, // 从 vault 转账到 taker 的 token a 的 ata 账户
     vault: &'a AccountView,       // vault 账户
-    token_program: &'a AccountView,
+    taker_ata_a: &'a AccountView, // 从 vault 转账到 taker 的 token a 的 ata 账户
+    taker_ata_b: &'a AccountView, // 账户给 maker 的 token b 的 ata 账户转账
+    maker_ata_b: &'a AccountView, // 从 taker 账户转账到 maker 的 token b 的 ata 账户
     system_program: &'a AccountView,
+    token_program: &'a AccountView,
 }
 
 impl<'a> TryFrom<&'a [AccountView]> for TakeAccounts<'a> {
     type Error = ProgramError;
 
     fn try_from(accounts: &'a [AccountView]) -> Result<Self, Self::Error> {
-        let [maker, taker, escrow, mint_a, mint_b, maker_ata_b, taker_ata_b, taker_ata_a, vault, token_program, system_program, _] =
+        let [taker, maker, escrow, mint_a, mint_b, vault, taker_ata_a, taker_ata_b, maker_ata_b, system_program, token_program, _] =
             accounts
         else {
             return Err(ProgramError::NotEnoughAccountKeys);
@@ -103,7 +103,7 @@ impl<'a> Take<'a> {
         // 判断 escrow 账户是否正确
         // 用调用指令所传入的账户中的 maker 账户和保存在 escrow 中的 seed 和 bump 了计算 escrow pda 地址
         // 通过计算出来的地址和指令账户列表中的 escrow 账户进行比较
-        let (escrow_address, _) = Address::find_program_address(
+        let escrow_address = Address::create_program_address(
             &[
                 b"escrow",
                 self.accounts.maker.address().as_ref(),
@@ -111,8 +111,8 @@ impl<'a> Take<'a> {
                 &escrow.bump,
             ],
             &crate::ID,
-        );
-        if self.accounts.escrow.address().clone() != escrow_address {
+        )?;
+        if self.accounts.escrow.address() != &escrow_address {
             return Err(ProgramError::InvalidAccountOwner);
         }
 

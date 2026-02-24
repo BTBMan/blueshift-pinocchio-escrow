@@ -1,7 +1,7 @@
 // 存钱, 创建金库
 use crate::{
     helpers::{
-        AccountChecker, AssociatedTokenAccount, AssociatedTokenAccountCheck,
+        AccountCheck, AssociatedTokenAccount, AssociatedTokenAccountCheck,
         AssociatedTokenAccountInit, MintInterface, ProgramAccount, ProgramAccountInit,
         SignerAccount,
     },
@@ -11,6 +11,7 @@ use pinocchio::{cpi::Seed, error::ProgramError, AccountView, Address};
 use pinocchio_token::instructions::Transfer;
 
 // 定义账户列表的结构体
+// 注意账户的顺序, 和调用指令时传入的账户顺序一致
 pub struct MakeAccounts<'a> {
     // maker 账户 (签名账户, 地址存入 escrow 账户中)
     pub maker: &'a AccountView,
@@ -24,10 +25,10 @@ pub struct MakeAccounts<'a> {
     pub maker_ata_a: &'a AccountView,
     // 金库 ata 账户
     pub vault: &'a AccountView,
-    // token program
-    pub token_program: &'a AccountView,
     // system program
     pub system_program: &'a AccountView,
+    // token program
+    pub token_program: &'a AccountView,
 }
 
 // 为账户列表实现 TryFrom trait
@@ -36,8 +37,7 @@ impl<'a> TryFrom<&'a [AccountView]> for MakeAccounts<'a> {
 
     // 校验账户
     fn try_from(accounts: &'a [AccountView]) -> Result<Self, Self::Error> {
-        //
-        let [maker, escrow, mint_a, mint_b, maker_ata_a, vault, token_program, system_program, _] =
+        let [maker, escrow, mint_a, mint_b, maker_ata_a, vault, system_program, token_program, _] =
             accounts
         else {
             return Err(ProgramError::NotEnoughAccountKeys);
@@ -113,7 +113,7 @@ impl<'a> TryFrom<(&'a [u8], &'a [AccountView])> for Make<'a> {
         let accounts = MakeAccounts::try_from(accounts)?;
         let instruction_data = MakeInstructionData::try_from(data)?;
 
-        // 创建 escrow PDA 数据账户
+        // 计算 pda 以及 pda 签名种子
         let seed_binding = instruction_data.seed.to_le_bytes();
         let (_escrow_pda, bump) = Address::find_program_address(
             &[
@@ -132,7 +132,12 @@ impl<'a> TryFrom<(&'a [u8], &'a [AccountView])> for Make<'a> {
         ];
 
         // 创建 escrow PDA 数据账户
-        ProgramAccount::init::<Escrow>(&accounts.maker, &accounts.escrow, &escrow_seeds)?;
+        ProgramAccount::init(
+            &accounts.maker,
+            &accounts.escrow,
+            &escrow_seeds,
+            Escrow::LEN,
+        )?;
 
         // 创建 vault ATA 账户
         AssociatedTokenAccount::init(

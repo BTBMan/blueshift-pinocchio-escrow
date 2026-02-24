@@ -9,7 +9,7 @@ use pinocchio_associated_token_account::instructions::Create;
 use pinocchio_system::instructions::CreateAccount;
 use solana_address::address;
 
-pub trait AccountChecker {
+pub trait AccountCheck {
     fn check(account: &AccountView) -> Result<(), ProgramError>;
 }
 
@@ -52,7 +52,7 @@ pub trait AssociatedTokenAccountInit {
 // 签名账户校验
 pub struct SignerAccount;
 
-impl AccountChecker for SignerAccount {
+impl AccountCheck for SignerAccount {
     // 校验账户是否是 signer
     fn check(account: &AccountView) -> Result<(), ProgramError> {
         if !account.is_signer() {
@@ -66,7 +66,7 @@ impl AccountChecker for SignerAccount {
 // system 账户校验
 pub struct SystemAccount;
 
-impl AccountChecker for SystemAccount {
+impl AccountCheck for SystemAccount {
     fn check(account: &AccountView) -> Result<(), ProgramError> {
         // owned_by() 检查账户的 owner 是否为指定程序
         // System Program 的 ID 是固定的
@@ -98,7 +98,7 @@ pub const TOKEN_2022_TOKEN_ACCOUNT_DISCRIMINATOR: u8 = 0x02;
 // 两者的内存布局一样, 都是 165, 而 token 2022 多了 extension 数据
 pub struct MintInterface;
 
-impl AccountChecker for MintInterface {
+impl AccountCheck for MintInterface {
     fn check(account: &AccountView) -> Result<(), ProgramError> {
         // 检查 account 是否被 token 2022 program 程序所拥有
         if account.owned_by(&TOKEN_2022_PROGRAM_ID) {
@@ -137,7 +137,7 @@ impl AccountChecker for MintInterface {
 // token account 账户校验
 pub struct TokenAccountInterface;
 
-impl AccountChecker for TokenAccountInterface {
+impl AccountCheck for TokenAccountInterface {
     fn check(account: &AccountView) -> Result<(), ProgramError> {
         // 检查是否由 Token-2022 Program 拥有
         if !account.owned_by(&TOKEN_2022_PROGRAM_ID) {
@@ -265,7 +265,7 @@ impl AssociatedTokenAccountInit for AssociatedTokenAccount {
 // 验证 program 账户
 pub struct ProgramAccount;
 
-impl AccountChecker for ProgramAccount {
+impl AccountCheck for ProgramAccount {
     fn check(account: &AccountView) -> Result<(), ProgramError> {
         // 验证账户由本程序拥有
         // 对应 Anchor 的 Account<T> 自动进行的 owner 检查
@@ -285,23 +285,24 @@ impl AccountChecker for ProgramAccount {
 // 创建程序账户
 pub trait ProgramAccountInit {
     // 创建程序拥有的 PDA 账户
-    // T 用于自动推导账户所需的空间大小，调用时使用 turbofish 语法：init::<Escrow>(...)
-    fn init<'a, T: Sized>(
+    // T 用于自动推导账户所需的空间大小，调用时使用 turbo fish 语法：init::<Escrow>(...) ❌ 行不通
+    fn init<'a>(
         payer: &AccountView,   // 支付者（对应 payer = xxx）
         account: &AccountView, // 要创建的账户
         seeds: &[Seed<'a>],    // PDA 种子（对应 seeds = [...]）
+        space: usize,
     ) -> ProgramResult;
 }
 
 impl ProgramAccountInit for ProgramAccount {
-    fn init<'a, T: Sized>(
+    fn init<'a>(
         payer: &AccountView,
         account: &AccountView,
         seeds: &[Seed<'a>],
+        space: usize,
     ) -> ProgramResult {
-        // 通过泛型 T 自动计算账户所需的空间大小
-        // 等价于 Anchor 的 space = 8 + Escrow::LEN
-        let space = core::mem::size_of::<T>();
+        // 通过泛型 T 自动计算账户所需的空间大小, ❌ 行不通
+        // let space = core::mem::size_of::<T>();
 
         // 获取租金豁免所需的 lamports 数量
         // 对应 Anchor 自动进行的租金计算
